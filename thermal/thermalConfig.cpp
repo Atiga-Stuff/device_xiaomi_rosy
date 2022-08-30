@@ -1681,6 +1681,7 @@ namespace thermal {
 		true,
 	};
 
+/*
 	std::vector<struct target_therm_cfg> bcl_conf = {
 		{
 			TemperatureType::BCL_VOLTAGE,
@@ -1699,6 +1700,7 @@ namespace thermal {
 			true,
 		},
 	};
+*/
 
 	std::vector<std::string> cpu_sensors_pineapple = {
 		"cpu-0-0-0",
@@ -2708,9 +2710,11 @@ std::vector<std::string> cpu_sensors_cliffs = {
 		it_2 = battery_bcl_cfg_disable_map.find(soc_id);
 		if (it_2 == battery_bcl_cfg_disable_map.end() || !it_2->second) {
 			thermalConfig.push_back(bat_conf);
+/*
 			if (!bcl_defined)
 				thermalConfig.insert(thermalConfig.end(),
 					bcl_conf.begin(), bcl_conf.end());
+*/
 		}
 		LOG(DEBUG) << "Total sensors:" << thermalConfig.size();
 	}
