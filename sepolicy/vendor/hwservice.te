@@ -1,1 +1,4 @@
 type hal_diag_hwservice, hwservice_manager_type;
+
+# AtigaFX
+type hal_dms_hwservice, hwservice_manager_type;

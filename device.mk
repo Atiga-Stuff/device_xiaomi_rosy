@@ -84,6 +84,10 @@ PRODUCT_COPY_FILES += \
 PRODUCT_PACKAGES += \
     AntHalService
 
+# AtigaFX
+PRODUCT_COPY_FILES += \
+		$(LOCAL_PATH)/configs/fx/dax-default.xml:$(TARGET_COPY_OUT_VENDOR)/etc/dolby/dax-default.xml
+
 # Audio
 PRODUCT_PACKAGES += \
     android.hardware.audio.service \
@@ -296,6 +300,12 @@ PRODUCT_COPY_FILES += \
 # Minijail
 PRODUCT_PACKAGES += \
     libavservices_minijail.vendor
+
+PRODUCT_PACKAGES += \
+    libcodec2_soft_common.vendor \
+    libcodec2_vndk.vendor \
+    libsfplugin_ccodec_utils.vendor \
+    libstagefright_foundation-v33
 
 # Net
 PRODUCT_PACKAGES += \
