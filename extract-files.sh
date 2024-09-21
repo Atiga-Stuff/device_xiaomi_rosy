@@ -54,6 +54,30 @@ if [ -z "${SRC}" ]; then
     SRC=adb
 fi
 
+function blob_fixup() {
+    case "${1}" in
+        # Camera graphicbuffer shim
+        vendor/lib/libmmcamera_ppeiscore.so)
+            [ "$2" = "" ] && return 0
+            "${PATCHELF}" --add-needed "libui_shim.so" "${2}"
+            ;;
+        # Camera VNDK support
+        vendor/lib/libmmcamera_ppeiscore.so)
+            [ "$2" = "" ] && return 0
+            "${PATCHELF}" --remove-needed "libgui.so" "${2}"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+
+    return 0
+}
+
+function blob_fixup_dry() {
+    blob_fixup "$1" ""
+}
+
 # Initialize the helper
 setup_vendor "${DEVICE}" "${VENDOR}" "${ANDROID_ROOT}" true "${CLEAN_VENDOR}"
 
@@ -61,11 +85,5 @@ extract "${MY_DIR}/proprietary-files.txt" "${SRC}" \
     "${KANG}" --section "${SECTION}"
 
 DEVICE_BLOB_ROOT="${ANDROID_ROOT}/vendor/${VENDOR}/${DEVICE}/proprietary"
-
-# Camera graphicbuffer shim
-"${PATCHELF}" --add-needed "libui_shim.so"  "${DEVICE_BLOB_ROOT}"/vendor/lib/libmmcamera_ppeiscore.so
-
-# Camera VNDK support
-"${PATCHELF}" --remove-needed "libgui.so" "${DEVICE_BLOB_ROOT}"/vendor/lib/libmmcamera_ppeiscore.so
 
 "${MY_DIR}/setup-makefiles.sh"
