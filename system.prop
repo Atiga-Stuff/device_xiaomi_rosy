@@ -22,7 +22,7 @@ ro.telephony.default_network=22,22
 
 #debug.sf.enable_hwc_vds=0 # Android default: 0 (false)
 debug.sf.hw=0
-debug.sf.latch_unsignaled=1
+debug.sf.auto_latch_unsignaled=0
 debug.egl.hw=0
 persist.hwc.mdpcomp.enable=true
 debug.mdpcomp.logs=0
