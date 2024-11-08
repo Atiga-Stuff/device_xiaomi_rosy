@@ -11,6 +11,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
@@ -20,7 +21,6 @@ import id.atiga.fx.R
 import id.atiga.fx.equalizer.ui.EqualizerScreen
 import id.atiga.fx.equalizer.ui.EqualizerViewModel
 import com.android.settingslib.spa.framework.compose.localNavController
-import com.android.settingslib.spa.framework.theme.SettingsTheme
 import com.android.settingslib.spa.widget.scaffold.SettingsScaffold
 
 class EqualizerActivity : ComponentActivity() {
@@ -30,7 +30,7 @@ class EqualizerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            SettingsTheme {
+            MaterialTheme {
                 MainContent()
             }
         }
