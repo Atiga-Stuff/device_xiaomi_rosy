@@ -300,7 +300,9 @@ PRODUCT_PACKAGES += \
 
 # Net
 PRODUCT_PACKAGES += \
-    android.system.net.netd@1.1.vendor
+    android.system.net.netd@1.1.vendor \
+    libnetutils.vendor \
+    libnetutils
 
 # OMX
 PRODUCT_PACKAGES += \
