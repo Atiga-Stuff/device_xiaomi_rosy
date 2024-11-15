@@ -205,7 +205,9 @@ PRODUCT_PACKAGES += \
     gdxbacktrace \
     gdxunwind \
     libshimfp \
-    libstdc++_vendor
+    libstdc++_vendor \
+    liblzma \
+    liblzma.vendor
 
 # FM
 PRODUCT_PACKAGES += \
