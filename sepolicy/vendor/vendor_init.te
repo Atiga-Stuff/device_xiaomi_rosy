@@ -19,3 +19,4 @@ get_prop(vendor_init, vendor_fingerprint_prop);
 # Allow vendor_init to create data folder for goodix fp
 allow vendor_init gx_fpd_data_file:dir create_dir_perms;
 
+allow vendor_init rootfs:file { getattr };
