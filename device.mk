@@ -456,6 +456,12 @@ PRODUCT_COPY_FILES += \
 PRODUCT_PACKAGES += \
     vndservicemanager
 
+# Wallpaper
+ifneq ($(INCLUDE_ATIGA_ARTS),)
+PRODUCT_PACKAGES += \
+    AtigaArtsStub
+endif
+
 # Whitelisted app
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/permissions/qti_whitelist.xml:$(TARGET_COPY_OUT_SYSTEM)/etc/sysconfig/qti_whitelist.xml \
