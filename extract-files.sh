@@ -65,4 +65,7 @@ DEVICE_BLOB_ROOT="${ANDROID_ROOT}/vendor/${VENDOR}/${DEVICE}/proprietary"
 # Camera graphicbuffer shim
 patchelf --add-needed "libui_shim.so"  "${DEVICE_BLOB_ROOT}"/vendor/lib/libmmcamera_ppeiscore.so
 
+# Camera VNDK support
+patchelf --remove-needed "libgui.so" "${DEVICE_BLOB_ROOT}"/vendor/lib/libmmcamera_ppeiscore.so
+
 "${MY_DIR}/setup-makefiles.sh"
