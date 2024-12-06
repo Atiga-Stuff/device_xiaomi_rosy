@@ -1,4 +1,7 @@
 #============= property_contexts ==============
+# Bluetooth
+persist.vendor.bt.address       u:object_r:vendor_bluetooth_prop:s0
+
 # Camera
 camera.						u:object_r:camera_prop:s0
 persist.cam.					u:object_r:camera_prop:s0
