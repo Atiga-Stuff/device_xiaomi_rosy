@@ -22,12 +22,8 @@ $(call inherit-product, $(SRC_TARGET_DIR)/product/product_launched_with_n_mr1.mk
 # Inherit from rosy device
 $(call inherit-product, device/xiaomi/rosy/device.mk)
 
-# Include our private certificate
--include vendor/atiga-priv/keys/keys.mk
-
-# Inherit from AtigaFx
-$(call inherit-product-if-exists, vendor/atiga/fx/fx.mk)
-TARGET_USE_FX := true
+# Inherit from Atiga-Stuff
+$(call inherit-product, device/xiaomi/rosy/atiga_stuff.mk)
 
 # Device identifier. This must come after all inclusions
 PRODUCT_DEVICE := rosy
