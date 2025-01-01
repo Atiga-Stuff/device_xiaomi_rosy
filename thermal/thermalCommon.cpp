@@ -28,6 +28,11 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear */
+
 #include <cstdio>
 #include <cinttypes>
 #include <string>
@@ -56,11 +61,10 @@
 #define CPU_USAGE_FILE		"/proc/stat"
 #define CPU_ONLINE_FILE_FORMAT	"/sys/devices/system/cpu/cpu%d/online"
 
+namespace aidl {
 namespace android {
 namespace hardware {
 namespace thermal {
-namespace V2_0 {
-namespace implementation {
 
 static std::unordered_map<std::string, cdevType> cdev_map = {
 	{"thermal-cpufreq-0", cdevType::CPU},
@@ -71,7 +75,16 @@ static std::unordered_map<std::string, cdevType> cdev_map = {
 	{"thermal-cpufreq-5", cdevType::CPU},
 	{"thermal-cpufreq-6", cdevType::CPU},
 	{"thermal-cpufreq-7", cdevType::CPU},
-	{"thermal-cluster-7-4", cdevType::CPU},
+	{"cpufreq-cpu0", cdevType::CPU},
+	{"cpufreq-cpu1", cdevType::CPU},
+	{"cpufreq-cpu2", cdevType::CPU},
+	{"cpufreq-cpu3", cdevType::CPU},
+	{"cpufreq-cpu4", cdevType::CPU},
+	{"cpufreq-cpu5", cdevType::CPU},
+	{"cpufreq-cpu6", cdevType::CPU},
+	{"cpufreq-cpu7", cdevType::CPU},
+	{"thermal-cluster-4-7", cdevType::CPU},
+	{"thermal-cluster-3-7", cdevType::CPU},
 	{"cpu-isolate0", cdevType::CPU},
 	{"cpu-isolate1", cdevType::CPU},
 	{"cpu-isolate2", cdevType::CPU},
@@ -80,11 +93,25 @@ static std::unordered_map<std::string, cdevType> cdev_map = {
 	{"cpu-isolate5", cdevType::CPU},
 	{"cpu-isolate6", cdevType::CPU},
 	{"cpu-isolate7", cdevType::CPU},
+	{"thermal-pause-1", cdevType::CPU},
+	{"thermal-pause-2", cdevType::CPU},
+	{"thermal-pause-4", cdevType::CPU},
+	{"thermal-pause-8", cdevType::CPU},
+	{"thermal-pause-10", cdevType::CPU},
+	{"thermal-pause-20", cdevType::CPU},
+	{"thermal-pause-40", cdevType::CPU},
+	{"thermal-pause-80", cdevType::CPU},
 	{"thermal-devfreq-0", cdevType::GPU},
+	{"devfreq-3d00000.qcom,kgsl-3d0", cdevType::GPU},
+	{"gpu", cdevType::GPU},
 	{"modem_tj", cdevType::MODEM},
+	{"modem_lte_dsc", cdevType::MODEM},
+	{"modem_nr_dsc", cdevType::MODEM},
+	{"modem_nr_scg_dsc", cdevType::MODEM},
 	{"cdsp", cdevType::NPU},
 	{"cdsp_hw", cdevType::NPU},
 	{"battery", cdevType::BATTERY},
+	{"fan-max31760", cdevType::FAN},
 };
 
 ThermalCommon::ThermalCommon()
@@ -239,19 +266,17 @@ int ThermalCommon::initialize_sensor(struct target_therm_cfg& cfg, int sens_idx)
 	sensor.lastThrottleStatus = sensor.t.throttlingStatus =
 		ThrottlingSeverity::NONE;
 	sensor.thresh.type = sensor.t.type = cfg.type;
-	sensor.thresh.vrThrottlingThreshold =
-	UNKNOWN_TEMPERATURE;
+	sensor.throt_severity = cfg.throt_severity;
 	for (idx = 0; idx <= (size_t)ThrottlingSeverity::SHUTDOWN; idx++) {
-		sensor.thresh.hotThrottlingThresholds[idx] =
-		sensor.thresh.coldThrottlingThresholds[idx] =
-			UNKNOWN_TEMPERATURE;
+		sensor.thresh.hotThrottlingThresholds.push_back(UNKNOWN_TEMPERATURE);
+		sensor.thresh.coldThrottlingThresholds.push_back(UNKNOWN_TEMPERATURE);
 	}
 
 	if (cfg.throt_thresh != 0 && cfg.positive_thresh_ramp)
-		sensor.thresh.hotThrottlingThresholds[(size_t)ThrottlingSeverity::SEVERE] =
+		sensor.thresh.hotThrottlingThresholds[(size_t)sensor.throt_severity] =
 			cfg.throt_thresh / (float)sensor.mulFactor;
 	else if (cfg.throt_thresh != 0 && !cfg.positive_thresh_ramp)
-		sensor.thresh.coldThrottlingThresholds[(size_t)ThrottlingSeverity::SEVERE] =
+		sensor.thresh.coldThrottlingThresholds[(size_t)sensor.throt_severity] =
 			cfg.throt_thresh / (float)sensor.mulFactor;
 
 	if (cfg.shutdwn_thresh != 0 && cfg.positive_thresh_ramp)
@@ -261,11 +286,7 @@ int ThermalCommon::initialize_sensor(struct target_therm_cfg& cfg, int sens_idx)
 		sensor.thresh.coldThrottlingThresholds[(size_t)ThrottlingSeverity::SHUTDOWN] =
 			cfg.shutdwn_thresh / (float)sensor.mulFactor;
 
-	if (cfg.vr_thresh != 0)
-		sensor.thresh.vrThrottlingThreshold =
-			cfg.vr_thresh / (float)sensor.mulFactor;
 	sens.push_back(sensor);
-	//read_temperature((struct therm_sensor *)sensor);
 
 	return 0;
 }
@@ -437,7 +458,7 @@ int ThermalCommon::estimateSeverity(struct therm_sensor& sensor)
 	}
 	if (idx >= 0)
 		severity = (ThrottlingSeverity)(idx);
-	LOG(INFO) << "Sensor Name:" << sensor.t.name << "temp: " <<
+	LOG(DEBUG) << "Sensor Name:" << sensor.t.name << "temp: " <<
 		temp << ". prev severity:" <<
 		(int)sensor.lastThrottleStatus << ". cur severity:" <<
 		(int)sensor.t.throttlingStatus << " New severity:" <<
@@ -501,6 +522,7 @@ void ThermalCommon::initThreshold(struct therm_sensor& sensor)
 			sensor.t.name;
 		return;
 	}
+#ifndef ENABLE_THERMAL_NETLINK
 	snprintf(file_name, sizeof(file_name), POLICY_FILE_FORMAT,
 			sensor.tzn);
 	ret = readLineFromFile(std::string(file_name), buf);
@@ -514,7 +536,7 @@ void ThermalCommon::initThreshold(struct therm_sensor& sensor)
 			sensor.t.name << std::endl;
 		return;
 	}
-
+#endif
 	next_trip = UNKNOWN_TEMPERATURE;
 	for (idx = 0;idx <= (int)ThrottlingSeverity::SHUTDOWN; idx++) {
 		if (isnan(sensor.thresh.hotThrottlingThresholds[idx])
@@ -551,92 +573,7 @@ void ThermalCommon::initThreshold(struct therm_sensor& sensor)
 	return;
 }
 
-int ThermalCommon::get_cpu_usages(hidl_vec<CpuUsage>& list) {
-	int vals, cpu_num, online;
-	ssize_t read;
-	uint64_t user, nice, system, idle, active, total;
-	char *line = NULL;
-	size_t len = 0;
-	size_t cpu = 0;
-	char file_name[MAX_LENGTH];
-	FILE *file;
-	FILE *cpu_file;
-
-	list.resize(ncpus);
-	file = fopen(CPU_USAGE_FILE, "r");
-	if (file == NULL) {
-		LOG(ERROR) << "failed to open:" << CPU_USAGE_FILE <<
-			" err:" << strerror(errno);
-		return -errno;
-	}
-
-	while ((read = getline(&line, &len, file)) != -1) {
-		if (strnlen(line, read) < 4 || strncmp(line, "cpu", 3) != 0 ||
-				!isdigit(line[3])) {
-			free(line);
-			line = NULL;
-			len = 0;
-			continue;
-		}
-		vals = sscanf(line, \
-			"cpu%d %" SCNu64 " %" SCNu64 " %" SCNu64 " %" SCNu64, \
-			&cpu_num, &user, &nice, &system, &idle);
-
-		free(line);
-		line = NULL;
-		len = 0;
-
-		if (vals != 5 || cpu == ncpus) {
-			if (vals != 5) {
-				LOG(ERROR) <<
-				"failed to read CPU information from file: "
-				<< strerror(errno);
-			} else {
-				LOG(ERROR) <<
-					"/proc/stat file has incorrect format.";
-			}
-			fclose(file);
-			return errno ? -errno : -EIO;
-		}
-
-		active = user + nice + system;
-		total = active + idle;
-
-		// Read online CPU information.
-		snprintf(file_name, MAX_LENGTH, CPU_ONLINE_FILE_FORMAT,
-				cpu_num);
-		cpu_file = fopen(file_name, "r");
-		online = 0;
-		if (cpu_file == NULL) {
-			LOG(ERROR) << "failed to open file:" << file_name <<
-				" err: " << strerror(errno);
-			fclose(file);
-			return -errno;
-		}
-		if (1 != fscanf(cpu_file, "%d", &online)) {
-			LOG(ERROR) << "failed to read CPU online information" << strerror(errno);
-			fclose(file);
-			fclose(cpu_file);
-			return errno ? -errno : -EIO;
-		}
-		fclose(cpu_file);
-
-		list[cpu_num].name = std::string("CPU") + std::to_string(cpu_num);
-		list[cpu_num].active = active;
-		list[cpu_num].total = total;
-		list[cpu_num].isOnline = online;
-		cpu++;
-	}
-	fclose(file);
-	if (cpu != ncpus) {
-		LOG(ERROR) <<"/proc/stat file has incorrect format.";
-		return -EIO;
-	}
-	return ncpus;
-}
-
-}  // namespace implementation
-}  // namespace V2_0
-}  // namespace thermal
-}  // namespace hardware
-}  // namespace android
+}// namespace thermal
+}// namespace hardware
+}// namespace android
+}// namespace aidl

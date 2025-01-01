@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -40,7 +41,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear */
 #include <android-base/strings.h>
 
 #include "thermalConfig.h"
-#include "thermalUtils.h"
+#include "thermalUtilsNetlink.h"
 
 namespace aidl {
 namespace android {
@@ -50,7 +51,13 @@ namespace thermal {
 ThermalUtils::ThermalUtils(const ueventCB &inp_cb):
 	cfg(),
 	cmnInst(),
-	monitor(std::bind(&ThermalUtils::ueventParse, this,
+	monitor(std::bind(&ThermalUtils::eventParse, this,
+				std::placeholders::_1,
+				std::placeholders::_2),
+		std::bind(&ThermalUtils::sampleParse, this,
+				std::placeholders::_1,
+				std::placeholders::_2),
+		std::bind(&ThermalUtils::eventCreateParse, this,
 				std::placeholders::_1,
 				std::placeholders::_2)),
 	cb(inp_cb)
@@ -67,13 +74,13 @@ ThermalUtils::ThermalUtils(const ueventCB &inp_cb):
 		sensorList = cmnInst.fetch_sensor_list();
 		std::lock_guard<std::mutex> _lock(sens_cb_mutex);
 		for (struct therm_sensor sens: sensorList) {
-			thermalConfig[sens.sensor_name] = sens;
+			thermalConfig[sens.tzn] = sens;
 			cmnInst.read_temperature(sens);
 			cmnInst.estimateSeverity(sens);
 			cmnInst.initThreshold(sens);
 		}
-		monitor.start();
 	}
+	monitor.start();
 	ret = cmnInst.initCdev();
 	if (ret > 0) {
 		is_cdev_init = true;
@@ -94,24 +101,75 @@ void ThermalUtils::Notify(struct therm_sensor& sens)
 	}
 }
 
-void ThermalUtils::ueventParse(std::string sensor_name, int temp)
+void ThermalUtils::eventParse(int tzn, int trip)
 {
-	LOG(DEBUG) << "uevent triggered for sensor: " << sensor_name
-		<< std::endl;
-	if (thermalConfig.find(sensor_name) == thermalConfig.end()) {
-		LOG(DEBUG) << "sensor is not monitored:" << sensor_name
+	if (trip != 1)
+		return;
+	if (thermalConfig.find(tzn) == thermalConfig.end()) {
+		LOG(DEBUG) << "sensor is not monitored:" << tzn
 			<< std::endl;
 		return;
 	}
 	std::lock_guard<std::mutex> _lock(sens_cb_mutex);
-	struct therm_sensor& sens = thermalConfig[sensor_name];
+	struct therm_sensor& sens = thermalConfig[tzn];
+	return Notify(sens);
+}
+
+void ThermalUtils::sampleParse(int tzn, int temp)
+{
+	if (thermalConfig.find(tzn) == thermalConfig.end()) {
+		LOG(DEBUG) << "sensor is not monitored:" << tzn
+			<< std::endl;
+		return;
+	}
+	std::lock_guard<std::mutex> _lock(sens_cb_mutex);
+	struct therm_sensor& sens = thermalConfig[tzn];
 	sens.t.value = (float)temp / (float)sens.mulFactor;
 	return Notify(sens);
 }
 
+void ThermalUtils::eventCreateParse(int tzn, const char *name)
+{
+	int ret = 0;
+	std::vector<struct therm_sensor> sensorList;
+	std::vector<struct target_therm_cfg> therm_cfg = cfg.fetchConfig();
+	std::vector<struct target_therm_cfg>::iterator it_vec;
+	std::vector<std::string>::iterator it;
+
+	if (isSensorInitialized())
+		return;
+	for (it_vec = therm_cfg.begin();
+		it_vec != therm_cfg.end(); it_vec++) {
+		for (it = it_vec->sensor_list.begin();
+			       it != it_vec->sensor_list.end(); it++) {
+			if (!it->compare(name))
+				break;
+		}
+		if (it != it_vec->sensor_list.end())
+			break;
+	}
+	if (it_vec == therm_cfg.end()) {
+		LOG(DEBUG) << "sensor is not monitored:" << tzn
+			<< std::endl;
+		return;
+	}
+	ret = cmnInst.initThermalZones(therm_cfg);
+	if (ret > 0) {
+		is_sensor_init = true;
+		sensorList = cmnInst.fetch_sensor_list();
+		std::lock_guard<std::mutex> _lock(sens_cb_mutex);
+		for (struct therm_sensor sens: sensorList) {
+			thermalConfig[sens.tzn] = sens;
+			cmnInst.read_temperature(sens);
+			cmnInst.estimateSeverity(sens);
+			cmnInst.initThreshold(sens);
+		}
+	}
+}
+
 int ThermalUtils::readTemperatures(std::vector<Temperature>& temp)
 {
-	std::unordered_map<std::string, struct therm_sensor>::iterator it;
+	std::unordered_map<int, struct therm_sensor>::iterator it;
 	int ret = 0;
 	std::vector<Temperature> _temp;
 
@@ -133,7 +191,7 @@ int ThermalUtils::readTemperatures(std::vector<Temperature>& temp)
 int ThermalUtils::readTemperatures(TemperatureType type,
                                             std::vector<Temperature>& temp)
 {
-	std::unordered_map<std::string, struct therm_sensor>::iterator it;
+	std::unordered_map<int, struct therm_sensor>::iterator it;
 	int ret = 0;
 	std::vector<Temperature> _temp;
 
@@ -156,7 +214,7 @@ int ThermalUtils::readTemperatures(TemperatureType type,
 
 int ThermalUtils::readTemperatureThreshold(std::vector<TemperatureThreshold>& thresh)
 {
-	std::unordered_map<std::string, struct therm_sensor>::iterator it;
+	std::unordered_map<int, struct therm_sensor>::iterator it;
 	std::vector<TemperatureThreshold> _thresh;
 
 	for (it = thermalConfig.begin(); it != thermalConfig.end(); it++) {
@@ -172,7 +230,7 @@ int ThermalUtils::readTemperatureThreshold(std::vector<TemperatureThreshold>& th
 int ThermalUtils::readTemperatureThreshold(TemperatureType type,
                                             std::vector<TemperatureThreshold>& thresh)
 {
-	std::unordered_map<std::string, struct therm_sensor>::iterator it;
+	std::unordered_map<int, struct therm_sensor>::iterator it;
 	std::vector<TemperatureThreshold> _thresh;
 
 	for (it = thermalConfig.begin(); it != thermalConfig.end(); it++) {

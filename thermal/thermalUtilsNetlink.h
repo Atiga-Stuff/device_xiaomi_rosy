@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -33,34 +34,61 @@
 Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
 SPDX-License-Identifier: BSD-3-Clause-Clear */
 
-#ifndef THERMAL_THERMAL_MONITOR_H__
-#define THERMAL_THERMAL_MONITOR_H__
+#ifndef THERMAL_THERMAL_UTILS_H__
+#define THERMAL_THERMAL_UTILS_H__
 
-#include <thread>
+#include <unordered_map>
+#include <mutex>
 #include <aidl/android/hardware/thermal/BnThermal.h>
+#include "thermalConfig.h"
+#include "thermalMonitorNetlink.h"
+#include "thermalCommon.h"
+#include "thermalData.h"
 
 namespace aidl {
 namespace android {
 namespace hardware {
 namespace thermal {
 
-using ueventMonitorCB = std::function<void(std::string sensor_name, int temp)>;
+using ueventCB = std::function<void(Temperature &t)>;
 
-class ThermalMonitor {
+class ThermalUtils {
 	public:
-		ThermalMonitor(const ueventMonitorCB &inp_cb);
-		~ThermalMonitor();
-
-		void parse_and_notify(char *inp_buf, ssize_t len);
-		bool stopPolling()
+		ThermalUtils(const ueventCB &inp_cb);
+		~ThermalUtils() = default;
+		bool isSensorInitialized()
 		{
-			return monitor_shutdown;
-		}
-		void start();
+			return is_sensor_init;
+		};
+		bool isCdevInitialized()
+		{
+			return is_cdev_init;
+		};
+		int readTemperatures(std::vector<Temperature>& temp);
+		int readTemperatures(TemperatureType type,
+                                            std::vector<Temperature>& temperatures);
+		int readTemperatureThreshold(std::vector<TemperatureThreshold>& thresh);
+		int readTemperatureThreshold(TemperatureType type,
+                                            std::vector<TemperatureThreshold>& thresh);
+		int readCdevStates(std::vector<CoolingDevice>& cdev);
+		int readCdevStates(cdevType type,
+                                            std::vector<CoolingDevice>& cdev);
 	private:
-		std::thread th;
-		bool monitor_shutdown;
-		ueventMonitorCB cb;
+		bool is_sensor_init;
+		bool is_cdev_init;
+		ThermalConfig cfg;
+		ThermalCommon cmnInst;
+		ThermalMonitor monitor;
+		std::unordered_map<int, struct therm_sensor>
+			thermalConfig;
+		std::vector<struct therm_cdev> cdevList;
+		std::mutex sens_cb_mutex;
+		ueventCB cb;
+
+		void eventParse(int tzn, int trip);
+		void sampleParse(int tzn, int temp);
+		void eventCreateParse(int tzn, const char *name);
+		void Notify(struct therm_sensor& sens);
 };
 
 }  // namespace thermal
@@ -68,4 +96,4 @@ class ThermalMonitor {
 }  // namespace android
 }  // namespace aidl
 
-#endif  // THERMAL_THERMAL_MONITOR_H__
+#endif  // THERMAL_THERMAL_UTILS_H__
