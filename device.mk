@@ -430,7 +430,7 @@ PRODUCT_COPY_FILES += \
 
 # Thermal
 PRODUCT_PACKAGES += \
-    android.hardware.thermal-service.qti
+    android.hardware.thermal-service.qti.rosy
 
 # Update
 AB_OTA_UPDATER := false
