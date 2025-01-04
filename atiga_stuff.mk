@@ -21,9 +21,11 @@
 $(call inherit-product-if-exists, vendor/atiga/fx/fx.mk)
 TARGET_USE_FX := true
 
+ifeq ($(USE_ATIGA_LAUNCHER),tru)
 # AtigaLauncher
 PRODUCT_PACKAGES += \
     AtigaLauncherQuickStep
 
 PRODUCT_DEXPREOPT_SPEED_APPS += \
     AtigaLauncherQuickStep
+endif
