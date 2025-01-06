@@ -17,15 +17,22 @@
 # Include our private certificate
 -include vendor/atiga-priv/keys/keys.mk
 
+ifneq ($(USE_ATIGA_STUFF),)
 # Inherit from AtigaFx
 $(call inherit-product-if-exists, vendor/atiga/fx/fx.mk)
 TARGET_USE_FX := true
 
-ifeq ($(USE_ATIGA_LAUNCHER),tru)
+USE_ATIGA_LAUNCHER ?= false
+ifeq ($(USE_ATIGA_LAUNCHER),true)
 # AtigaLauncher
 PRODUCT_PACKAGES += \
     AtigaLauncherQuickStep
 
 PRODUCT_DEXPREOPT_SPEED_APPS += \
     AtigaLauncherQuickStep
+endif
+
+# AtigaArts
+PRODUCT_PACKAGES += \
+    AtigaArtsStub
 endif
