@@ -59,12 +59,12 @@ function blob_fixup() {
         # Camera graphicbuffer shim
         vendor/lib/libmmcamera_ppeiscore.so)
             [ "$2" = "" ] && return 0
-            "${PATCHELF}" --add-needed "libui_shim.so" "${2}"
+            "${PATCHELF}" --add-needed "libppeiscore_shim.so" "${2}"
             ;;
         # Camera VNDK support
         vendor/lib/libmmcamera_ppeiscore.so)
             [ "$2" = "" ] && return 0
-            "${PATCHELF}" --remove-needed "libgui.so" "${2}"
+            "${PATCHELF}" --replace-needed "libGLESv2.so" "libGLESv2_adreno.so" "${2}"
             ;;
         *)
             return 1
