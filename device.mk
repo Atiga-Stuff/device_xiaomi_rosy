@@ -158,7 +158,7 @@ PRODUCT_PACKAGES += \
     camera.msm8953 \
     libshimcam \
     libgui_vendor:32 \
-		libui_shim
+		libppeiscore_shim
 
 # Cgroup and task_profiles
 PRODUCT_COPY_FILES += \
