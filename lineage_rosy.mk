@@ -19,12 +19,14 @@ $(call inherit-product, vendor/lineage/config/common_full_phone.mk)
 LINEAGE_MAINTAINER := aepranata
 
 # AxionOS Stuff
+ifeq ($(IS_AXION),true)
 AXION_CAMERA_REAR_INFO := 12
 AXION_CAMERA_FRONT_INFO := 5
 AXION_MAINTAINER := aepranata
 AXION_PROCESSOR := Snapdragon_450
 AXION_CPU_BIG_CORES := -
 AXION_CPU_SMALL_CORES := 0,1,2,3,4,5,6,7
+endif
 
 # Inherit from rosy device
 $(call inherit-product, device/xiaomi/rosy/full_rosy.mk)
